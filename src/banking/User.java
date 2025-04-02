@@ -50,7 +50,7 @@ public class User implements Serializable {
     public Transaction issueCharge(double amount, String description) {
         if (amount > 0 && balance >= amount) {
             balance -= amount;
-            Transaction newTransaction = new Transaction(-amount, "Charge: " + description);
+            Transaction newTransaction = new Transaction(-amount, description);
             return newTransaction;
         } 
         else if (amount <= 0) {

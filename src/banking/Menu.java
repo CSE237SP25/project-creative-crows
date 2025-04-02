@@ -69,6 +69,11 @@ public class Menu {
         	return;
         }
 
+        // Reminder to user that they are charging themselves
+        if (nameOfUserToCharge.equals(activeUser.getUsername())) {
+            System.out.println("Note: This is a self-charge (service fee).");
+        }
+
         User userToCharge = dataHandler.getUserData(nameOfUserToCharge);
         System.out.print("Charge amount: ");
         double chargeAmount;
@@ -83,10 +88,28 @@ public class Menu {
         keyboardInput.nextLine();
         System.out.print("Charge description: ");
         String chargeDesc = keyboardInput.nextLine();
-        Transaction newTransaction = userToCharge.issueCharge(chargeAmount, chargeDesc); 
-        if (newTransaction != null) {
-            dataHandler.addUserTransaction(userToCharge.getUsername(), newTransaction); //add transaction history to DB
-            System.out.println("Charge issued.");
+
+        // Self-Charge
+        if (userToCharge.getUsername().equals(activeUser.getUsername())) {
+            Transaction selfCharge = activeUser.issueCharge(chargeAmount, "Self Charge: " + chargeDesc);
+            if (selfCharge != null) {
+                dataHandler.addUserTransaction(activeUser.getUsername(), selfCharge);
+                System.out.println("Self charge issued.");
+            }
+        } 
+        else {
+            // Merchant charges customer
+            Transaction customerTransaction = userToCharge.issueCharge(chargeAmount, "Charge from " + activeUser.getUsername() + ": " + chargeDesc);
+            if (customerTransaction == null) {
+                System.out.println("Charge failed.");
+                return;
+            }
+            System.out.println("Charge issued successfully.");
+            
+            dataHandler.addUserTransaction(userToCharge.getUsername(), customerTransaction);
+            activeUser.deposit(chargeAmount);
+            Transaction merchantTransaction = new Transaction(chargeAmount, "Received from " + userToCharge.getUsername() + ": " + chargeDesc);
+            dataHandler.addUserTransaction(activeUser.getUsername(), merchantTransaction);
         }
     }
 
