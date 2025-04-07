@@ -14,6 +14,12 @@ public class FileSystem {
         this.userFile = new File("userMap.ser");
         this.transactionFile = new File("transactionMap.ser");
     }
+    
+    public FileSystem(String customizedUserFile, String customizedTransactionFile) {
+        this.userFile = new File(customizedUserFile);
+        this.transactionFile = new File(customizedTransactionFile);
+    }
+
 
     // Save users to file
     public void saveUsersToFile(Map<String, User> userMap) {
