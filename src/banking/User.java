@@ -191,7 +191,7 @@ public class User implements Serializable {
                 if (t != null) {
                     String extra = "";
                     if (t instanceof Loan loan) {
-                        extra = String.format(" [Approved=%b, Paid=%.2f/%.2f]",
+                        extra = String.format(" [Loan: Approved=%b, Paid=%.2f/%.2f]",
                             loan.isApproved(), loan.getAmountPaid(), loan.getAmount());
                     }
                     System.out.printf("[%s] %s: $%.2f%s\n", t.getDate(), t.getDescription(), t.getAmount(), extra);

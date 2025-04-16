@@ -1,12 +1,18 @@
 package banking;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashMap; //future class, handle reading from our files for persistence
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.function.BooleanSupplier;
+
+import banking.Authenticator;
+import banking.QRCodeGenerator;
+import java.util.Map;
+import java.util.function.Function;
 
 public class Menu {
     
