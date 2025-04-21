@@ -25,39 +25,63 @@ public class Menu {
     // add a tentative admin for testing functionality purpose, construction of admins should be more carefully thought about
     private User subsystemUser;
     private String menuScope = "public";
+    private User rootUser;
+    private Administrator rootAdmin;
+    
+    private void initializeRootAdmin() {
+        this.rootUser = new User("admin", Authenticator.hashPassword(""), 0.0);
+        this.rootAdmin = new Administrator(rootUser);
+        this.rootAdmin.setAuthLevel(2);
+        if (!dataHandler.doesUserExist("admin")) {
+            dataHandler.createUser(rootAdmin);
+        }
+    }
+
+    private void initializePublicOptions() {
+        this.publicOptions = new ArrayList<>();
+        publicOptions.add(new Option("Login to account", this::login));
+        publicOptions.add(new Option("Create account", this::signUp));
+        publicOptions.add(new Option("Reset Password", this::recoverAccount));
+        publicOptions.add(new Option("Exit", this::shutDown));
+    }
+
+    private void initializePrivateOptions() {
+        this.privateOptions = new ArrayList<>();
+        privateOptions.add(new Option("Check Balance", this::getBalance));
+        privateOptions.add(new Option("View Account Number", this::getAccountNumber));
+        privateOptions.add(new Option("Deposit", this::deposit));
+        privateOptions.add(new Option("Withdraw", this::withdraw));
+        privateOptions.add(new Option("Transfer Money", this::transferMoney));
+        privateOptions.add(new Option("Issue Charge", this::issueCharge));
+        privateOptions.add(new Option("Print Statement", this::printStatement));
+        privateOptions.add(new Option("Change Password", this::changePassword));
+        privateOptions.add(new Option("Enable 2FA Recovery", this::enable2FA, () -> activeUser.getSecret() == null));
+        privateOptions.add(new Option("Remove 2FA Recovery", this::remove2FA, () -> activeUser.getSecret() != null));
+        privateOptions.add(new Option("Change Username", this::changeUsername));
+        privateOptions.add(new Option("Logout", this::logOut));
+    }
+
+    private void initializeAdminOptions() {
+        this.adminOptions = new ArrayList<>();
+        adminOptions.add(new Option("Print All Transaction", this::printAllTransactions));
+        adminOptions.add(new Option("Recall Transaction", this::recallTransaction));
+    }
+
 
     public Menu(Database dataHandler, SafeInput keyboardInput) {
         this.dataHandler = dataHandler;
         this.keyboardInput = keyboardInput;
         this.subsystemUser = new User("__MENU_SUBSYSTEM__","0",0);
         this.activeUser = subsystemUser;
-        this.publicOptions = new ArrayList<>();
-        publicOptions.add(new Option("Login to account", this::login));
-        publicOptions.add(new Option("Create account", this::signUp));
-        publicOptions.add(new Option("Reset Password", this::recoverAccount));
-        publicOptions.add(new Option("Exit",this::shutDown));
-        //tentatively added two public options for testing purpose
-        //one problem is that do we only allow recalling transfers or deposit/withdraws can be recalled too
-        this.privateOptions = new ArrayList<>();
-        privateOptions.add(new Option("Check Balance",this::getBalance));
-        privateOptions.add(new Option("View Account Number",this::getAccountNumber));
-        privateOptions.add(new Option("Deposit",this::deposit));
-        privateOptions.add(new Option("Withdraw",this::withdraw));
-        privateOptions.add(new Option("Transfer Money", this::transferMoney));
-        privateOptions.add(new Option("Issue Charge",this::issueCharge));
-        privateOptions.add(new Option("Print Statement",this::printStatement));
-        privateOptions.add(new Option("Change Password", this::changePassword));
-        privateOptions.add(new Option("Enable 2FA Recovery", this::enable2FA,()->activeUser.getSecret() == null));
-        privateOptions.add(new Option("Remove 2FA Recovery", this::remove2FA,()->activeUser.getSecret() != null));
-        privateOptions.add(new Option("Change Username", this::changeUsername));
-        privateOptions.add(new Option("View Admin Panel", this::enableAdminView,()->activeUser.isAuthorizedFor(2)));
-        privateOptions.add(new Option("Logout",this::logOut));
-        this.adminOptions = new ArrayList<>();
-        adminOptions.add(new Option("Print All Transaction",this::printAllTransactions));
-        adminOptions.add(new Option("Recall Transaction",this::recallTransaction));
-        adminOptions.add(new Option("Close Admin Panel",this::disableAdminView));
+        this.menuScope = "public";
         this.running = false;
+
+        initializeRootAdmin();
+        initializePublicOptions();
+        initializePrivateOptions();
+        initializeAdminOptions();
     }
+
     
     public Database getDataHandler() {
     	return dataHandler;
@@ -65,10 +89,6 @@ public class Menu {
 
     public void enableAdminView() {
         this.menuScope = "admin";
-    }
-
-    public void disableAdminView() {
-        this.menuScope = "private";
     }
 
     public User getSubsystemUser() {
@@ -214,7 +234,6 @@ public class Menu {
         if (dataHandler.doesUserExist(username)) {
             if(authenticateUserPass(username, password)) {
                 System.out.println("Login successful!");
-                this.activeUser.setAuthLevel(2);
             } else {
                 System.out.println("Login failed: password hashes do not match");
             }
@@ -226,8 +245,12 @@ public class Menu {
     public boolean authenticateUserPass(String username,String password) {
         User requestedAccount = dataHandler.getUserData(username);
         if (requestedAccount.getHashedPassword().equals(Authenticator.hashPassword(password))) {
+        	if (requestedAccount.isAuthorizedFor(2)) {
+        		this.menuScope = "admin";
+        	}else {
+        		this.menuScope = "private";
+        	}
             this.activeUser = requestedAccount;
-            this.menuScope = "private";
             return true;
         }
         return false;
