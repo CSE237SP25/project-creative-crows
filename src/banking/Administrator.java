@@ -82,4 +82,12 @@ public class Administrator extends User {
         return false;
     }
     
+    public void freezeUserAccount(User user) {
+        user.freezeAccount();
+        System.out.println("Account for user '" + user.getUsername() + "' has been frozen.");
+    }
+
+    public void unfreezeUserAccount(User user, String password) {
+        user.unfreezeAccount(password);
+    }
 }

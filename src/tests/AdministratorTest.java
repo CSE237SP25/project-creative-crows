@@ -70,7 +70,7 @@ public class AdministratorTest {
 
         Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
 
-        assertDoesNotThrow(() -> admin.showAllLoansWithStatus(allTx));
+        assertDoesNotThrow(() -> admin.showAllLoansWithStatus());
         db.deleteUser(testUsername);
     }
 
@@ -81,7 +81,7 @@ public class AdministratorTest {
         db.addUserTransaction(testUsername, loan);
 
         Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
-        boolean result = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+        boolean result = admin.approveLoanById(loan.getTransactionID());
 
         assertTrue(result);
         assertTrue(loan.isApproved());
@@ -94,10 +94,10 @@ public class AdministratorTest {
         db.createUser(testUser);
         Loan loan = testUser.requestLoan(100.0, "Laptop");
         db.addUserTransaction(testUsername, loan);
-        loan.approve();
+        loan.approve(db);
 
         Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
-        boolean result = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+        boolean result = admin.approveLoanById(loan.getTransactionID());
 
         assertFalse(result);
         db.deleteUser(testUsername);

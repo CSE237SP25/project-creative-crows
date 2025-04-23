@@ -16,6 +16,7 @@ public class User implements Serializable {
     private String accountNumber;
     private int authLevel;
     private double debt;
+    private boolean frozen = false;
     
     public User(String username, String hashedPassword, double balance) {
         this.username = username;
@@ -85,6 +86,23 @@ public class User implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(username, hashedPassword, balance);
+    }
+    
+    public boolean isFrozen() {
+        return frozen;
+    }
+
+    public void freezeAccount() {
+        this.frozen = true;
+    }
+
+    public void unfreezeAccount(String passwordAttempt) {
+        if (this.hashedPassword.equals(Authenticator.hashPassword(passwordAttempt))) {
+            this.frozen = false;
+            System.out.println("Account successfully unfrozen.");
+        } else {
+            System.out.println("Incorrect password. Unable to unfreeze account.");
+        }
     }
     
     //issue a charge
