@@ -6,8 +6,11 @@ import java.util.Map;
 
 public class Administrator extends User {
 
-    public Administrator(User linkedUser) {
+    private Database dataHandler;
+
+    public Administrator(User linkedUser,Database dataHandler) {
         super(linkedUser.getUsername(), linkedUser.getHashedPassword(), linkedUser.getBalance());
+        this.dataHandler = dataHandler;
     }
     
     public void recallTransactions(HashMap<User, Transaction> userTransactions) {
@@ -31,7 +34,8 @@ public class Administrator extends User {
         }
     }
     
-    public void showAllLoansWithStatus(Map<String, List<Transaction>> allTransactions) {
+    public void showAllLoansWithStatus() {
+        Map<String, List<Transaction>> allTransactions = dataHandler.getAllTransactionMap();
         System.out.println("\n--- Pending Loans ---");
         for (Map.Entry<String, List<Transaction>> entry : allTransactions.entrySet()) {
             String username = entry.getKey();
@@ -57,7 +61,8 @@ public class Administrator extends User {
         }
     }
     
-    public boolean approveLoanById(String transactionID, Map<String, List<Transaction>> allTransactions, Database db) {
+    public boolean approveLoanById(String transactionID) {
+        Map<String, List<Transaction>> allTransactions = dataHandler.getAllTransactionMap();
         for (Map.Entry<String, List<Transaction>> entry : allTransactions.entrySet()) {
             String username = entry.getKey();
             List<Transaction> txList = entry.getValue();
@@ -67,12 +72,8 @@ public class Administrator extends User {
                         System.out.println("This loan has already been approved.");
                         return false;
                     }
-                    loan.approve();
-                    User loanUser = db.getUserData(username);
-                    if (loanUser != null) {
-                        loanUser.depositSilently(loan.getAmount());
-                        System.out.println("Loan approved successfully.");
-                    }
+                    loan.approve(dataHandler);
+                    System.out.println("Loan approved successfully.");
                     return true;
                 }
             }

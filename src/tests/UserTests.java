@@ -234,21 +234,21 @@ public class UserTests {
         User testUser = new User("LoanPayer", Authenticator.hashPassword("password"), 500.0);
         database.createUser(testUser);
 
-        Loan loan = new Loan(200.0, "Loan request - laptop");
-        loan.approve();
+        Loan loan = new Loan(testUser.getAccountNumber(),200.0, "Loan request - laptop");
+        loan.approve(database);
         Transaction loanTx = loan;
         database.addUserTransaction(testUser.getUsername(), loanTx);
 
         Transaction repayment = testUser.repayLoan(loan, 150.0);
         assertNotNull(repayment);
-        assertEquals(350.0, testUser.getBalance(), 0.01);
+        assertEquals(550.0, testUser.getBalance(), 0.01);
         assertEquals(150.0, loan.getAmountPaid(), 0.01);
         assertFalse(loan.isPaidOff());
 
         Transaction finalRepayment = testUser.repayLoan(loan, 50.0);
         assertNotNull(finalRepayment);
         assertTrue(loan.isPaidOff());
-        assertEquals(300.0, testUser.getBalance(), 0.01);
+        assertEquals(500.0, testUser.getBalance(), 0.01);
         database.deleteUser("LoanPayer");
     }
 
@@ -257,7 +257,7 @@ public class UserTests {
         User testUser = new User("UnapprovedLoanUser", Authenticator.hashPassword("password"), 500.0);
         database.createUser(testUser);
 
-        Loan loan = new Loan(200.0, "Loan request - book");
+        Loan loan = new Loan(testUser.getAccountNumber(),200.0, "Loan request - book");
         Transaction repayment = testUser.repayLoan(loan, 100.0);
 
         assertNull(repayment);
@@ -270,19 +270,19 @@ public class UserTests {
         User testUser = new User("Overpayer", Authenticator.hashPassword("password"), 500.0);
         database.createUser(testUser);
 
-        Loan loan = new Loan(100.0, "Loan request - gift card");
-        loan.approve();
+        Loan loan = new Loan(testUser.getAccountNumber(),100.0, "Loan request - gift card");
+        loan.approve(database);
         database.addUserTransaction(testUser.getUsername(), loan);
 
         Transaction partialRepayment = testUser.repayLoan(loan, 80.0);
         assertNotNull(partialRepayment);
-        assertEquals(420.0, testUser.getBalance(), 0.01);
+        assertEquals(520.0, testUser.getBalance(), 0.01);
         assertEquals(80.0, loan.getAmountPaid(), 0.01);
         assertFalse(loan.isPaidOff());
 
         Transaction cappedRepayment = testUser.repayLoan(loan, 50.0);
         assertNotNull(cappedRepayment);
-        assertEquals(400.0, testUser.getBalance(), 0.01);
+        assertEquals(500.0, testUser.getBalance(), 0.01);
         assertEquals(100.0, loan.getAmountPaid(), 0.01);
         assertTrue(loan.isPaidOff());
         database.deleteUser("Overpayer");

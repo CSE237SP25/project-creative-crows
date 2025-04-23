@@ -5,12 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.function.BooleanSupplier;
 
 import banking.Authenticator;
 import banking.QRCodeGenerator;
+import banking.Loan;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -24,18 +26,8 @@ public class Menu {
     private boolean running;
     private SafeInput keyboardInput;
     private User subsystemUser;
+    private Administrator activeAdmin;
     private String menuScope = "public";
-    private User rootUser;
-    private Administrator rootAdmin;
-    
-    private void initializeRootAdmin() {
-        this.rootUser = new User("admin", Authenticator.hashPassword(""), 0.0);
-        this.rootAdmin = new Administrator(rootUser);
-        this.rootAdmin.setAuthLevel(2);
-        if (!dataHandler.doesUserExist("admin")) {
-            dataHandler.createUser(rootAdmin);
-        }
-    }
 
     private void initializePublicOptions() {
         this.publicOptions = new ArrayList<>();
@@ -55,11 +47,13 @@ public class Menu {
         privateOptions.add(new Option("Issue Charge", this::issueCharge));
         privateOptions.add(new Option("Print Statement", this::printStatement));
         privateOptions.add(new Option("Request Loan", this::requestLoan));
-        privateOptions.add(new Option("Repay Loan", this::repayLoan));
+        privateOptions.add(new Option("Make a payment on a loan",this::makePayment,()->dataHandler.getUserTransaction(activeUser.getUsername()).stream()
+        .anyMatch(trans->trans instanceof Loan && ((Loan)trans).isApproved()&& !((Loan)trans).isPaidOff())));
         privateOptions.add(new Option("Change Password", this::changePassword));
         privateOptions.add(new Option("Enable 2FA Recovery", this::enable2FA, () -> activeUser.getSecret() == null));
         privateOptions.add(new Option("Remove 2FA Recovery", this::remove2FA, () -> activeUser.getSecret() != null));
         privateOptions.add(new Option("Change Username", this::changeUsername));
+        privateOptions.add(new Option("View Admin Panel", this::enableAdminView,()->activeUser.isAuthorizedFor(2)));
         privateOptions.add(new Option("Logout", this::logOut));
     }
 
@@ -68,9 +62,10 @@ public class Menu {
         adminOptions.add(new Option("Print All Transaction", this::printAllTransactions));
         adminOptions.add(new Option("Recall Transaction", this::recallTransaction));
         adminOptions.add(new Option("Review All Loans", this::adminReviewLoans));
-        adminOptions.add(new Option("Logout", this::logOut));
+        adminOptions.add(new Option("Close Admin Panel",this::disableAdminView));
     }
 
+    private boolean autoApprove = false;
 
     public Menu(Database dataHandler, SafeInput keyboardInput) {
         this.dataHandler = dataHandler;
@@ -79,7 +74,6 @@ public class Menu {
         this.activeUser = subsystemUser;
         this.running = false;
 
-        initializeRootAdmin();
         initializePublicOptions();
         initializePrivateOptions();
         initializeAdminOptions();
@@ -90,8 +84,25 @@ public class Menu {
     	return dataHandler;
     }
 
+    public void toggleAutoApprove() {
+        this.autoApprove = !this.autoApprove;
+    }
+
+    public boolean getAutoApprovePolicy() {
+        return this.autoApprove;
+    }
+
+    public void setActiveAdmin(Administrator admin) {
+        this.activeAdmin = admin;
+    }
+
     public void enableAdminView() {
+        this.activeAdmin = new Administrator(this.activeUser,this.dataHandler);
         this.menuScope = "admin";
+    }
+
+    public void disableAdminView() {
+        this.menuScope = "private";
     }
 
     public User getSubsystemUser() {
@@ -249,7 +260,7 @@ public class Menu {
         User requestedAccount = dataHandler.getUserData(username);
         if (requestedAccount.getHashedPassword().equals(Authenticator.hashPassword(password))) {
         	if (requestedAccount.isAuthorizedFor(2)) {
-        		this.menuScope = "admin";
+        		enableAdminView();
         	}else {
         		this.menuScope = "private";
         	}
@@ -363,24 +374,17 @@ public class Menu {
         HashMap<User, Transaction> usersInfluenced = dataHandler.recallTransaction(transactionID);
 
         if (usersInfluenced.isEmpty()) {
-            //match found but recall was not allowed by rules, do nothing
-            if (idExists) {
-                return;
-            } 
-            //no match found, return error message
-            else {
-                System.out.println("No matching transaction found for the given ID!");
-                return;
-            }
-        }
-        new Administrator(this.activeUser).recallTransactions(usersInfluenced);
+    		System.out.println("No matching transaction found for the given ID!");
+    		return ;
+    	}
+        activeAdmin.recallTransactions(usersInfluenced);
         dataHandler.updateUserInfo();
         dataHandler.saveAllTransactions();
     }
 
     public void printAllTransactions() {
         List<Transaction> transactionList = dataHandler.getAllTransactions();
-        new Administrator(this.activeUser).printAllTransactions(transactionList);
+        activeAdmin.printAllTransactions(transactionList);
     }
 
     public void requestLoan() {
@@ -390,55 +394,39 @@ public class Menu {
         if (loan != null) {
             dataHandler.addUserTransaction(activeUser.getUsername(), loan);
             System.out.println("Awaiting admin approval.");
+            if (this.autoApprove) {
+                activeAdmin.approveLoanById(loan.getTransactionID());
+            }
         }
     }
 
-    public void repayLoan() {
-        List<Transaction> userTx = dataHandler.getUserTransaction(activeUser.getUsername());
-        System.out.println("\n--- Your Loans ---");
-        for (Transaction t : userTx) {
-            if (t instanceof Loan loan) {
-                System.out.printf("%s: $%.2f [Approved=%b, Paid=%.2f/%.2f] [ID: %s]\n",
-                    loan.getDescription(), loan.getAmount(), loan.isApproved(),
-                    loan.getAmountPaid(), loan.getAmount(), loan.getTransactionID());
-            }
-        }
-    
-        String loanID = keyboardInput.getSafeInput("Enter Loan ID to repay (or type 'exit' to exit):", "", Function.identity());
-        if (loanID.equalsIgnoreCase("exit")) {
-            return;
-        }
-        Loan selectedLoan = null;
-        for (Transaction t : userTx) {
-            if (t instanceof Loan loan && loan.getTransactionID().equals(loanID)) {
-                selectedLoan = loan;
-                break;
-            }
-        }
-        if (selectedLoan == null) {
-            System.out.println("No matching loan found for the given ID.");
-            return;
-        }
-    
-        double repayAmount = keyboardInput.getSafeInput("Enter amount to repay:", "Invalid amount. Please enter a number.", Double::parseDouble);
-        Transaction repayment = activeUser.repayLoan(selectedLoan, repayAmount);
-        if (repayment != null) {
-            dataHandler.addUserTransaction(activeUser.getUsername(), repayment);
-            dataHandler.updateUserInfo();
-            dataHandler.saveAllTransactions();
-        }
+    public void makePayment() {
+        List<Option> currentLoans = dataHandler.getUserTransaction(activeUser.getUsername()).stream()
+            .filter(trans->trans instanceof Loan && ((Loan)trans).isApproved()&& !((Loan)trans).isPaidOff())
+            .map(
+                trans->{
+                double total = ((Loan)trans).getAmount();
+                double unpaid = total - ((Loan)trans).getAmountPaid();
+                return new Option(trans.getDescription().substring("Loan request - ".length())+": amount = "+total+", unpaid = "+unpaid,()->{
+                    double amount = keyboardInput.getSafeInput("Payment amount:", "Invalid amount. Please enter a value between 0 and "+unpaid, (in)->{
+                        Double value = Double.parseDouble(in);
+                        if (value >= 0 && value <= unpaid) return value;
+                        else throw new IllegalArgumentException();
+                    });
+                    activeUser.makePayment(amount, (Loan)trans);
+                });}
+            )
+            .collect(Collectors.toList());
+        printMenu(currentLoans);
     }
-    
-    
+
     public void adminReviewLoans() {
-        Map<String, List<Transaction>> allTransactions = dataHandler.getAllTransactionMap();
-        Administrator admin = new Administrator(activeUser);
-        admin.showAllLoansWithStatus(allTransactions);
+        activeAdmin.showAllLoansWithStatus();
 
         String loanIdToApprove = keyboardInput.getSafeInput("\nEnter the Loan ID to approve (or type 'exit' to exit):", "Invalid input.", Function.identity());
 
         if (!loanIdToApprove.equalsIgnoreCase("exit")) {
-            boolean approved = admin.approveLoanById(loanIdToApprove, allTransactions, dataHandler);
+            boolean approved = activeAdmin.approveLoanById(loanIdToApprove);
             if (approved) {
                 dataHandler.updateUserInfo();
                 dataHandler.saveAllTransactions();
@@ -451,7 +439,6 @@ public class Menu {
         this.menuScope = "public";
         System.out.println("Logged out Succesfully");
     }
-    
     
     public User getActiveUser() {
     	return activeUser;

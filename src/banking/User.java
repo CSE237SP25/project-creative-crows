@@ -15,6 +15,7 @@ public class User implements Serializable {
     private String recoverySecret;
     private String accountNumber;
     private int authLevel;
+    private double debt;
     
     public User(String username, String hashedPassword, double balance) {
         this.username = username;
@@ -22,6 +23,7 @@ public class User implements Serializable {
         this.balance = balance;
         this.accountNumber = UUID.randomUUID().toString();
         this.authLevel = 0;
+        this.debt = 0;
     }
     
     public String getAccountNumber() {
@@ -201,13 +203,18 @@ public class User implements Serializable {
         System.out.printf("Current Balance: $%.2f\n", balance);
     }
 
+    public void recieveLoanApproval(Loan loan) {
+        balance += loan.getAmount();
+        debt += loan.getAmount();
+    }
+
     //Request loan
     public Loan requestLoan(double amount, String reason) {
         if (amount <= 0) {
             System.out.println("Loan amount must be positive.");
             return null;
         }
-        Loan loan = new Loan(amount, "Loan request - " + reason);
+        Loan loan = new Loan(accountNumber,amount, "Loan request - " + reason);
         System.out.println("Loan request submitted for $" + String.format("%.2f", amount));
         return loan;
     }    
@@ -238,6 +245,18 @@ public class User implements Serializable {
         System.out.printf("Repayment successful. Repaid: $%.2f%n", repayAmount);
 
         return new Transaction(-repayAmount, "Loan repayment - " + loan.getDescription());
+    }
+    //Make payment for loan
+    public Transaction makePayment(double amount, Loan loan) {
+        if (amount <= 0) {
+            System.out.println("Invalid payment value, it must be positive.");
+        }
+        if (balance >= amount) {
+            balance -= amount;
+            return loan.makePayment(amount);
+        }
+        System.out.println("Insufficient balance.");
+        return null;
     }
     
 }
