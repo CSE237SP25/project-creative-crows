@@ -22,7 +22,7 @@ public class AdministratorTest {
     public void setUp() throws Exception {
     	db = new Database();
         testUser = new User(testUsername, "adminpass", 1000.0);
-        admin = new Administrator(testUser);
+        admin = new Administrator(testUser,db);
     }
 
     @Test
@@ -49,11 +49,12 @@ public class AdministratorTest {
     	db.createUser(testUser);
         db.addUserTransaction(testUsername, new Transaction(100.0, "Deposit"));
         db.addUserTransaction(testUsername, new Transaction(20.0, "Withdrawal"));
+        db.addUserTransaction(testUsername, new Transaction(30.0, "Withdrawal"));
 
         List<Transaction> all = db.getAllTransactions();
 
         // Just verify nothing crashes and expected number of lines exist
-        assertEquals(2, all.size());
+        assertEquals(3, all.size());
         admin.printAllTransactions(all);
         db.deleteUser(testUsername);
     }

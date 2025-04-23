@@ -19,7 +19,7 @@ public class LoanTests {
         db = new Database();
         user = new User("loanUser", Authenticator.hashPassword("pass123"), 0.0);
         db.createUser(user);
-        admin = new Administrator(user);
+        admin = new Administrator(user,db);
     }
 
     @AfterEach
@@ -46,7 +46,7 @@ public class LoanTests {
         db.addUserTransaction(user.getUsername(), loan);
 
         Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
-        boolean success = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+        boolean success = admin.approveLoanById(loan.getTransactionID());
 
         assertTrue(success);
         assertEquals(300.0, db.getUserData(user.getUsername()).getBalance());
@@ -58,8 +58,8 @@ public class LoanTests {
         db.addUserTransaction(user.getUsername(), loan);
 
         Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
-        boolean firstApproval = admin.approveLoanById(loan.getTransactionID(), allTx, db);
-        boolean secondApproval = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+        boolean firstApproval = admin.approveLoanById(loan.getTransactionID());
+        boolean secondApproval = admin.approveLoanById(loan.getTransactionID());
 
         assertTrue(firstApproval);
         assertFalse(secondApproval);
