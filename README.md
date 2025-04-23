@@ -22,11 +22,12 @@ Team Members:
 2. A menu should list options in two columns
 3. A User should be able to get loans
 4. An admin should be able to approve loans
-5. An admin should be able to recall transactions
-6. A user should be able to pay back approved loans
-7. A transaction should have a unique ID, a bidirectional pair should share the same ID
-8. A root admin should be existing already and manipulate loans/recalling
-9. An admin should have different menu panel than users
+5. A banking App should be allowed to auto approve loans
+6. A banking App should be able to configure the default admin account
+7. An admin should be able to recall transactions
+8. A user should be able to pay back approved loans
+9. A transaction should have a unique ID, a bidirectional pair should share the same ID
+10. An admin should have extra menu options in a seperate panel than standard users
 
 # Is there anything that you implemented but doesn't currently work?
 
@@ -34,9 +35,11 @@ NA.
 
 Note: To use the `Enable 2FA Recovery` option, you will need some form of 2FA installed on your phone or computer. Apps like [Google Authenticator](https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2), [Authy](https://www.authy.com/) and [FreeOTP](https://freeotp.github.io/) are commonly used, but there are many more. For example, you can simply use DuoMobile to scan the QR code. Once the account is added, you will be able to use the `Reset Password` option on the login page to reset your password without logging in.
 
-Note: We have initialized an administrator account with the username **"admin"** and an **empty password** (just press Enter when prompted for the password).
+Note: We have initialized an administrator account with the username **"admin"** and an **supersecurepassword** by default. To change this, run ```
+./run.sh --adminUser NAME --adminPassword PASS
+```
+and if you would like loans to be auto approved, add the flag `--autoApproveLoans true`
 You can log in as an administrator from the login page using these credentials to test admin functionalities.
-
 # What commands are needed to compile and run your code from the command line?
 ```
 git clone https://github.com/CSE237SP25/project-creative-crows.git
