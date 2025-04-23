@@ -28,7 +28,7 @@ public class LoanTests {
     }
 
     @Test
-    void testLoanRequestIsRecorded() {
+    void testLoanRequestIsRecorded() throws Exception {
         Loan loan = user.requestLoan(200.0, "New Laptop");
         assertNotNull(loan);
         assertFalse(loan.isApproved());
@@ -38,6 +38,7 @@ public class LoanTests {
         assertEquals(1, tx.size());
         assertTrue(tx.get(0) instanceof Loan);
         assertEquals(200.0, tx.get(0).getAmount());
+        db.deleteUser(user.getUsername());
     }
 
     @Test

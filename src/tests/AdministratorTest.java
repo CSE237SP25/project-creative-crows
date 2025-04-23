@@ -2,6 +2,7 @@ package tests;
 
 import banking.Administrator;
 import banking.Database;
+import banking.Loan;
 import banking.Transaction;
 import banking.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +57,49 @@ public class AdministratorTest {
         // Just verify nothing crashes and expected number of lines exist
         assertEquals(3, all.size());
         admin.printAllTransactions(all);
+        db.deleteUser(testUsername);
+    }
+
+    @Test
+    void testShowAllLoansWithStatus() throws Exception {
+        db.createUser(testUser);
+        Loan loan1 = testUser.requestLoan(150.0, "Emergency");
+        Loan loan2 = testUser.requestLoan(200.0, "Vacation");
+        db.addUserTransaction(testUsername, loan1);
+        db.addUserTransaction(testUsername, loan2);
+
+        Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
+
+        assertDoesNotThrow(() -> admin.showAllLoansWithStatus(allTx));
+        db.deleteUser(testUsername);
+    }
+
+    @Test
+    void testApproveLoanByIdSuccessfulApproval() throws Exception {
+        db.createUser(testUser);
+        Loan loan = testUser.requestLoan(200.0, "Bike");
+        db.addUserTransaction(testUsername, loan);
+
+        Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
+        boolean result = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+
+        assertTrue(result);
+        assertTrue(loan.isApproved());
+        assertEquals(1200.0, db.getUserData(testUsername).getBalance());
+        db.deleteUser(testUsername);
+    }
+
+    @Test
+    void testApproveLoanByIdAlreadyApproved() throws Exception {
+        db.createUser(testUser);
+        Loan loan = testUser.requestLoan(100.0, "Laptop");
+        db.addUserTransaction(testUsername, loan);
+        loan.approve();
+
+        Map<String, List<Transaction>> allTx = db.getAllTransactionMap();
+        boolean result = admin.approveLoanById(loan.getTransactionID(), allTx, db);
+
+        assertFalse(result);
         db.deleteUser(testUsername);
     }
 
